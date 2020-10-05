@@ -1,26 +1,44 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, {useState} from 'react';
+import {useDataApi} from "./effect/dataApi";
+import {debounce} from "./util/debounce";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+
+const api = 'https://hn.algolia.com/api/v1/search?query=';
+const genApiUrlWithQuery = (query) => `${api}${query}`;
+const debounceTime = 2000;
+const initialQuery = 'redux';
+const initialData = {hits: []};
+const errorMsg = 'Something went wrong ...';
+const loadingMsg = 'Loading ...';
+
+const App = () => {
+    const [query, setQuery] = useState(initialQuery);
+    const [{data, loading, error}, doFetch] = useDataApi(
+        genApiUrlWithQuery(query),
+        initialData
+    );
+    const [debounceSearch] = useState(
+        () => debounce(
+            query => doFetch(genApiUrlWithQuery(query)),
+            debounceTime,
+            setQuery
+        )
+    );
+    return (
+        <>
+            <input type="text" value={query}
+                   onChange={e => debounceSearch(e.target.value)}/>
+            {error && <div>{errorMsg}</div>}
+            {loading ? <div>{loadingMsg}</div> : <ul>
+                {data.hits.map(item => (
+                    <li key={item.objectID}>
+                        <a href={item.url}>{item.title}</a>
+                    </li>
+                ))}
+            </ul>}
+        </>
+
+    )
+};
 
 export default App;
